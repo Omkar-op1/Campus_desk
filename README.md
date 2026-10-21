@@ -57,7 +57,7 @@ Student records include `studentId`, `name`, `email`, `department` (department I
 ## Deploy the three tiers
 
 1. **MongoDB Atlas:** Create a database user with only the required database permissions, allow network access from the API host, and use the `studentDB` database in the connection string.
-2. **Render backend:** Create a Node web service from this repository and keep the repository root as its root directory. Use `npm install` as the build command and `npm run start --workspace=backend` as the start command. Set `MONGODB_URI` to the Atlas URI and `FRONTEND_URL` to the exact Netlify site origin. Multiple exact origins can be comma-separated. Render provides `PORT`.
+2. **Render backend:** Create a Blueprint from this repository using the root `render.yaml`. Set `MONGODB_URI` to the Atlas URI and `FRONTEND_URL` to the exact Netlify site origin. Multiple exact origins can be comma-separated. The Blueprint configures the backend root directory, install/start commands, and `/health` health check. Render provides `PORT`.
 3. **Netlify frontend:** Deploy from the repository root as a Vite site. Set the build command to `npm run build`, the publish directory to `frontend/dist`, and `VITE_API_URL` to the Render service origin (for example, `https://your-service.onrender.com`). Redeploy after setting environment variables.
 4. Verify `https://your-service.onrender.com/health`, then test student and department CRUD operations from the deployed frontend and confirm the records in Atlas.
 
