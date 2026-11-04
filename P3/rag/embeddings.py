@@ -9,7 +9,7 @@ class GeminiEmbeddingFunction:
         self,
         client: Any,
         *,
-        model: str = "gemini-embedding-2",
+        model: str = "gemini-embedding-001",
         task_type: str = "RETRIEVAL_DOCUMENT",
     ) -> None:
         self.client = client
@@ -40,7 +40,7 @@ class GeminiEmbeddingFunction:
 def create_embedding_functions(
     client: Any,
     *,
-    model: str = "gemini-embedding-2",
+    model: str = "gemini-embedding-001",
 ) -> tuple[Callable[[list[str]], list[list[float]]], Callable[[list[str]], list[list[float]]]]:
     return (
         GeminiEmbeddingFunction(

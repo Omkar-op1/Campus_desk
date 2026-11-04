@@ -20,8 +20,8 @@ load_dotenv(PROJECT_DIR / ".env")
 
 DOCUMENTS_DIR = PROJECT_DIR / "documents"
 DEFAULT_CHAT_MODEL = "gemini-3.8-flash"
-DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
-COLLECTION_NAME = "college_documents_gemini_embedding_2"
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-001"
+COLLECTION_NAME = "college_documents_gemini_embedding_001"
 
 
 def get_setting(name: str, default: str | None = None) -> str | None:

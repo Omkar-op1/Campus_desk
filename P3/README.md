@@ -8,7 +8,7 @@ This project is implemented and managed as a **single-person project**. Jira is 
 
 - PDF upload and text extraction with source filename and page retention.
 - Automatic indexing of PDFs in `documents/`, plus optional PDF upload.
-- Overlapping text chunks and Gemini `gemini-embedding-2` semantic embeddings.
+- Overlapping text chunks and Gemini `gemini-embedding-001` semantic embeddings.
 - Qdrant Cloud storage; re-indexing a same-named PDF replaces its previous passages.
 - Grounded answers from Gemini (`gemini-3.8-flash` by default).
 - Configurable retrieval distance threshold and top-passage count.
@@ -25,7 +25,7 @@ Choose one of these run methods:
 - **Python:** Python 3.10+ and a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 - **Docker:** Docker Engine/Desktop with Compose and a Gemini API key.
 
-The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. Embeddings default to Gemini `gemini-embedding-2`; set `GEMINI_EMBEDDING_MODEL` to another supported model if needed. Qdrant Cloud is configured with `QDRANT_URL` and `QDRANT_API_KEY`. The local `.env` file is loaded automatically and is excluded from version control.
+The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. Embeddings default to Gemini `gemini-embedding-001`; set `GEMINI_EMBEDDING_MODEL` to another supported model if needed. Qdrant Cloud is configured with `QDRANT_URL` and `QDRANT_API_KEY`. The local `.env` file is loaded automatically and is excluded from version control.
 
 ## Run with Python
 
@@ -56,7 +56,7 @@ The app automatically indexes PDFs from `documents/` on startup. It skips files 
    ```toml
    GEMINI_API_KEY = "your_google_ai_studio_api_key"
    GEMINI_MODEL = "gemini-3.8-flash"
-   GEMINI_EMBEDDING_MODEL = "gemini-embedding-2"
+   GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
    QDRANT_URL = "https://your-cluster.qdrant.io"
    QDRANT_API_KEY = "your_qdrant_cloud_api_key"
    ```
