@@ -11,7 +11,7 @@ from google import genai
 from google.genai.errors import APIError
 
 from rag.documents import DocumentError, parse_pdf
-from rag.embeddings import embed_texts
+from rag.embeddings import create_embedding_functions
 from rag.service import DEFAULT_MAX_COSINE_DISTANCE, RagService
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -19,7 +19,8 @@ load_dotenv(PROJECT_DIR / ".env")
 
 DOCUMENTS_DIR = PROJECT_DIR / "documents"
 DEFAULT_CHAT_MODEL = "gemini-3.8-flash"
-COLLECTION_NAME = "college_documents"
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2"
+COLLECTION_NAME = "college_documents_gemini_embedding_2"
 
 
 def get_setting(name: str, default: str | None = None) -> str | None:
@@ -43,22 +44,41 @@ st.set_page_config(
 
 @st.cache_resource
 def get_service(chat_model: str) -> RagService:
-    database_dir = Path(
-        get_setting("CHROMA_DB_DIR", str(PROJECT_DIR / "chroma_db"))
-        or str(PROJECT_DIR / "chroma_db")
-    )
-    database_dir.mkdir(parents=True, exist_ok=True)
-    vector_client = chromadb.PersistentClient(path=str(database_dir))
+    chroma_api_key = get_setting("CHROMA_API_KEY")
+    if chroma_api_key:
+        cloud_options: dict[str, str] = {"api_key": chroma_api_key}
+        for setting_name, option_name in (
+            ("CHROMA_TENANT", "tenant"),
+            ("CHROMA_DATABASE", "database"),
+            ("CHROMA_HOST", "cloud_host"),
+        ):
+            value = get_setting(setting_name)
+            if value:
+                cloud_options[option_name] = value
+        vector_client = chromadb.CloudClient(**cloud_options)
+    else:
+        database_dir = Path(
+            get_setting("CHROMA_DB_DIR", str(PROJECT_DIR / "chroma_db"))
+            or str(PROJECT_DIR / "chroma_db")
+        )
+        database_dir.mkdir(parents=True, exist_ok=True)
+        vector_client = chromadb.PersistentClient(path=str(database_dir))
     collection = vector_client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
     )
     gemini_client = genai.Client(api_key=get_setting("GEMINI_API_KEY"))
+    document_embedder, query_embedder = create_embedding_functions(
+        gemini_client,
+        model=get_setting("GEMINI_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+        or DEFAULT_EMBEDDING_MODEL,
+    )
     return RagService(
         client=gemini_client,
         collection=collection,
         chat_model=chat_model,
-        embedder=embed_texts,
+        embedder=document_embedder,
+        query_embedder=query_embedder,
     )
 
 
@@ -93,9 +113,8 @@ def show_connection_help(
 
     st.error(f"Gemini model or local embedding request failed: {details}")
     st.caption(
-        "Check GEMINI_API_KEY and GEMINI_MODEL in Streamlit secrets or .env. "
-        "Local embeddings also need the all-MiniLM-L6-v2 model available on "
-        "this machine."
+        "Check GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EMBEDDING_MODEL, and "
+        "Chroma Cloud settings in Streamlit secrets or .env."
     )
 
 
@@ -141,7 +160,7 @@ with st.sidebar:
         or DEFAULT_CHAT_MODEL,
         help="Choose a Gemini model enabled for your Google AI Studio API key.",
     )
-    st.text("Embeddings: all-MiniLM-L6-v2 (local)")
+    st.text(f"Embeddings: {get_setting('GEMINI_EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)}")
     st.text(
         f"Gemini API key: "
         f"{'configured' if get_setting('GEMINI_API_KEY') else 'missing'}"

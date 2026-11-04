@@ -35,11 +35,13 @@ class RagService:
         collection: Any,
         chat_model: str,
         embedder: Callable[[list[str]], list[list[float]]],
+        query_embedder: Callable[[list[str]], list[list[float]]] | None = None,
     ) -> None:
         self.client = client
         self.collection = collection
         self.chat_model = chat_model
         self.embedder = embedder
+        self.query_embedder = query_embedder or embedder
 
     def index_document(self, document: ParsedDocument) -> int:
         if not document.chunks:
@@ -116,7 +118,7 @@ class RagService:
         if top_k < 1:
             raise ValueError("top_k must be positive.")
 
-        query_embeddings = self.embedder([question.strip()])
+        query_embeddings = self.query_embedder([question.strip()])
         if not query_embeddings:
             raise RuntimeError("The embedding model returned no embedding for the question.")
         query_embedding = query_embeddings[0]

@@ -8,8 +8,8 @@ This project is implemented and managed as a **single-person project**. Jira is 
 
 - PDF upload and text extraction with source filename and page retention.
 - Automatic indexing of PDFs in `documents/`, plus optional PDF upload.
-- Overlapping text chunks and local semantic embeddings using ChromaDB's `all-MiniLM-L6-v2` embedding function.
-- Persistent ChromaDB storage; re-indexing a same-named PDF replaces its previous passages.
+- Overlapping text chunks and Gemini `gemini-embedding-2` semantic embeddings.
+- Chroma Cloud storage; re-indexing a same-named PDF replaces its previous passages.
 - Grounded answers from Gemini (`gemini-3.8-flash` by default).
 - Configurable retrieval distance threshold and top-passage count.
 - Explicit refusal when no document is indexed or retrieved evidence is weak.
@@ -25,7 +25,7 @@ Choose one of these run methods:
 - **Python:** Python 3.10+ and a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 - **Docker:** Docker Engine/Desktop with Compose and a Gemini API key.
 
-The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. The embedding model runs locally and does not require an API key. The local `.env` file is loaded automatically and is excluded from version control.
+The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. Embeddings default to Gemini `gemini-embedding-2`; set `GEMINI_EMBEDDING_MODEL` to another supported model if needed. The local `.env` file is loaded automatically and is excluded from version control.
 
 ## Run with Python
 
@@ -42,7 +42,7 @@ python -m streamlit run app.py
 
 Open `http://localhost:8501`. On macOS/Linux, run `test -f .env || cp .env.example .env`, add your Google AI Studio key to `GEMINI_API_KEY`, then run `python -m streamlit run app.py`. Keep the key private and do not commit it.
 
-The app automatically indexes PDFs from `documents/` on startup. It skips files already indexed; use **Reindex PDFs in documents folder** to pick up changes to an existing file. The local vector data is written to `chroma_db/` by default. Set `CHROMA_DB_DIR` to use another persistent location.
+The app automatically indexes PDFs from `documents/` on startup. It skips files already indexed; use **Reindex PDFs in documents folder** to pick up changes to an existing file. Without Chroma Cloud credentials, local development falls back to `chroma_db/`.
 
 ## Deploy on Streamlit Community Cloud
 
@@ -50,14 +50,19 @@ The app automatically indexes PDFs from `documents/` on startup. It skips files 
 2. In [Streamlit Community Cloud](https://share.streamlit.io/), create an app with:
    - **Main file path:** `P3/app.py` when `P3` is a subdirectory, otherwise `app.py`.
    - **Python version:** `3.12` (also recorded in `.python-version`).
-3. Add the following under **Advanced settings → Secrets**:
+3. Add the following under **Advanced settings → Secrets**. Create a Chroma Cloud database and copy its values from the dashboard's **Connect** panel:
 
    ```toml
    GEMINI_API_KEY = "your_google_ai_studio_api_key"
    GEMINI_MODEL = "gemini-3.8-flash"
+   GEMINI_EMBEDDING_MODEL = "gemini-embedding-2"
+   CHROMA_API_KEY = "your_chroma_cloud_api_key"
+   CHROMA_TENANT = "your_chroma_tenant_id"
+   CHROMA_DATABASE = "your_chroma_database_name"
+   # CHROMA_HOST = "europe-west1.gcp.trychroma.com"
    ```
 
-The app reads Streamlit secrets in the cloud and `.env` locally. The PDFs committed in `documents/` are indexed automatically after startup. Streamlit Cloud storage is ephemeral, so uploaded PDFs and the generated Chroma index are lost when the app is rebuilt or restarted; re-upload documents or keep the source PDFs in `documents/`. Never commit `.env` or `secrets.toml`.
+The app reads Streamlit secrets in the cloud and `.env` locally. When `CHROMA_API_KEY` is configured, it uses Chroma Cloud; otherwise it uses the local persistent client. The PDFs committed in `documents/` are indexed automatically after startup. Uploaded PDFs are not durable, so keep permanent source PDFs in `documents/`. Never commit `.env` or `secrets.toml`.
 
 ## Run with Docker Compose
 
@@ -79,7 +84,7 @@ Stop the service with `Ctrl+C`, then `docker compose down`. Keep the volume to r
 4. Check the cited source and page against the original PDF.
 5. Adjust the retrieval distance cutoff if your own evaluation shows too many refusals or weak matches.
 
-PDF text extraction, embeddings, and the vector index stay local. The question and retrieved excerpts are sent to Google's Gemini API for answer generation. Do not index sensitive student records. Review Google's data handling terms before using non-public documents.
+PDF text extraction stays in the app process. Embeddings and answer generation use Google's Gemini API, and vectors/metadata are stored in Chroma Cloud when configured. Do not index sensitive student records. Review Google's and Chroma's data handling terms before using non-public documents.
 
 ## Evaluation
 
