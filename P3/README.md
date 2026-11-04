@@ -49,7 +49,7 @@ The app automatically indexes PDFs from `documents/` on startup. It skips files 
 1. Push this `P3` directory to a GitHub repository (or use it as the repository root).
 2. In [Streamlit Community Cloud](https://share.streamlit.io/), create an app with:
    - **Main file path:** `P3/app.py` when `P3` is a subdirectory, otherwise `app.py`.
-   - **Python version:** `3.12` (also recorded in `.python-version`).
+   - **Python version:** `3.12` (also recorded in `.python-version`; do not select Python 3.14).
 3. Create a Qdrant Cloud cluster and copy its cluster URL and API key.
 4. Add the following under **Advanced settings → Secrets**:
 
