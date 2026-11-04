@@ -1,56 +1,61 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+
+import httpx
 
 
-class GeminiEmbeddingFunction:
+class VoyageEmbeddingFunction:
     def __init__(
         self,
-        client: Any,
+        api_key: str,
         *,
-        model: str = "gemini-embedding-001",
-        task_type: str = "RETRIEVAL_DOCUMENT",
+        model: str = "voyage-4-lite",
+        input_type: str = "document",
     ) -> None:
-        self.client = client
+        self.api_key = api_key
         self.model = model
-        self.task_type = task_type
+        self.input_type = input_type
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
-        values: list[list[float]] = []
-        for text in texts:
-            response = self.client.models.embed_content(
-                model=self.model,
-                contents=text,
-                config={"task_type": self.task_type},
-            )
-            embeddings = getattr(response, "embeddings", None)
-            if not embeddings or len(embeddings) != 1:
-                raise RuntimeError(
-                    "Gemini returned an incomplete embedding response."
-                )
-            embedding = embeddings[0]
-            vector = getattr(embedding, "values", None)
-            if not isinstance(vector, list) or not vector:
-                raise RuntimeError("Gemini returned an empty embedding.")
-            values.append([float(value) for value in vector])
-        return values
+        if not texts:
+            return []
+        response = httpx.post(
+            "https://api.voyageai.com/v1/embeddings",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "input": texts,
+                "model": self.model,
+                "input_type": self.input_type,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        embeddings = payload.get("data")
+        if not isinstance(embeddings, list) or len(embeddings) != len(texts):
+            raise RuntimeError("Voyage returned an incomplete embedding batch.")
+        embeddings.sort(key=lambda item: item.get("index", -1))
+        values = [item.get("embedding") for item in embeddings]
+        if any(not isinstance(vector, list) or not vector for vector in values):
+            raise RuntimeError("Voyage returned an empty embedding.")
+        return [[float(value) for value in vector] for vector in values]
 
 
 def create_embedding_functions(
-    client: Any,
+    api_key: str,
     *,
-    model: str = "gemini-embedding-001",
+    model: str = "voyage-4-lite",
 ) -> tuple[Callable[[list[str]], list[list[float]]], Callable[[list[str]], list[list[float]]]]:
     return (
-        GeminiEmbeddingFunction(
-            client,
+        VoyageEmbeddingFunction(
+            api_key,
             model=model,
-            task_type="RETRIEVAL_DOCUMENT",
+            input_type="document",
         ),
-        GeminiEmbeddingFunction(
-            client,
+        VoyageEmbeddingFunction(
+            api_key,
             model=model,
-            task_type="RETRIEVAL_QUERY",
+            input_type="query",
         ),
     )

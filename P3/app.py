@@ -20,8 +20,8 @@ load_dotenv(PROJECT_DIR / ".env")
 
 DOCUMENTS_DIR = PROJECT_DIR / "documents"
 DEFAULT_CHAT_MODEL = "gemini-3.8-flash"
-DEFAULT_EMBEDDING_MODEL = "gemini-embedding-001"
-COLLECTION_NAME = "college_documents_gemini_embedding_001"
+DEFAULT_EMBEDDING_MODEL = "voyage-4-lite"
+COLLECTION_NAME = "college_documents_voyage_4_lite"
 
 
 def get_setting(name: str, default: str | None = None) -> str | None:
@@ -53,10 +53,13 @@ def get_service(chat_model: str) -> RagService:
         QdrantClient(url=qdrant_url, api_key=qdrant_api_key),
         COLLECTION_NAME,
     )
+    voyage_api_key = get_setting("VOYAGE_API_KEY")
+    if not voyage_api_key:
+        raise ValueError("VOYAGE_API_KEY must be configured.")
     gemini_client = genai.Client(api_key=get_setting("GEMINI_API_KEY"))
     document_embedder, query_embedder = create_embedding_functions(
-        gemini_client,
-        model=get_setting("GEMINI_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+        voyage_api_key,
+        model=get_setting("VOYAGE_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
         or DEFAULT_EMBEDDING_MODEL,
     )
     return RagService(
@@ -99,8 +102,8 @@ def show_connection_help(
 
     st.error(f"Gemini model or local embedding request failed: {details}")
     st.caption(
-        "Check GEMINI_API_KEY, GEMINI_MODEL, GEMINI_EMBEDDING_MODEL, and "
-        "Chroma Cloud settings in Streamlit secrets or .env."
+        "Check GEMINI_API_KEY, GEMINI_MODEL, VOYAGE_API_KEY, and Qdrant "
+        "settings in Streamlit secrets or .env."
     )
 
 
@@ -146,7 +149,7 @@ with st.sidebar:
         or DEFAULT_CHAT_MODEL,
         help="Choose a Gemini model enabled for your Google AI Studio API key.",
     )
-    st.text(f"Embeddings: {get_setting('GEMINI_EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)}")
+    st.text(f"Embeddings: {get_setting('VOYAGE_EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)}")
     st.text(
         f"Gemini API key: "
         f"{'configured' if get_setting('GEMINI_API_KEY') else 'missing'}"
