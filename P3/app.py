@@ -24,6 +24,18 @@ DEFAULT_EMBEDDING_MODEL = "voyage-4-lite"
 COLLECTION_NAME = "college_documents_voyage_4_lite"
 
 
+def normalize_model_name(model: str) -> str:
+    normalized = model.strip()
+    if normalized.startswith("models/"):
+        normalized = normalized.removeprefix("models/")
+    if not normalized or "/" in normalized:
+        raise ValueError(
+            "GEMINI_MODEL must be a model name such as `gemini-3.8-flash`, "
+            "not a resource path."
+        )
+    return normalized
+
+
 def get_setting(name: str, default: str | None = None) -> str | None:
     value = os.environ.get(name)
     if value:
@@ -45,6 +57,7 @@ st.set_page_config(
 
 @st.cache_resource
 def get_service(chat_model: str) -> RagService:
+    chat_model = normalize_model_name(chat_model)
     qdrant_url = get_setting("QDRANT_URL")
     qdrant_api_key = get_setting("QDRANT_API_KEY")
     if not qdrant_url or not qdrant_api_key:
@@ -143,10 +156,10 @@ st.write(
 
 with st.sidebar:
     st.header("Model settings")
+    configured_chat_model = get_setting("GEMINI_MODEL", DEFAULT_CHAT_MODEL)
     chat_model = st.text_input(
         "Gemini model",
-        value=get_setting("GEMINI_MODEL", DEFAULT_CHAT_MODEL)
-        or DEFAULT_CHAT_MODEL,
+        value=configured_chat_model or DEFAULT_CHAT_MODEL,
         help="Choose a Gemini model enabled for your Google AI Studio API key.",
     )
     st.text(f"Embeddings: {get_setting('VOYAGE_EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)}")
