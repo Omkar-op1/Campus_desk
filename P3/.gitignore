@@ -5,3 +5,4 @@ venv/
 .env
 .streamlit/secrets.toml
 evaluation/results/
+chroma_db/
