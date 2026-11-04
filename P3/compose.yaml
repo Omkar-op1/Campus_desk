@@ -6,11 +6,9 @@ services:
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
-      CHROMA_DB_DIR: /app/chroma_db
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
     volumes:
       - ./documents:/app/documents:ro
-      - chroma_data:/app/chroma_db
     restart: unless-stopped
-
-volumes:
-  chroma_data:

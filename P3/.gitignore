@@ -4,5 +4,4 @@ __pycache__/
 venv/
 .env
 .streamlit/secrets.toml
-chroma_db/
 evaluation/results/

@@ -3,15 +3,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import chromadb
 import httpx
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
 from google.genai.errors import APIError
+from qdrant_client import QdrantClient
 
 from rag.documents import DocumentError, parse_pdf
 from rag.embeddings import create_embedding_functions
+from rag.qdrant_store import QdrantCollection
 from rag.service import DEFAULT_MAX_COSINE_DISTANCE, RagService
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -44,28 +45,13 @@ st.set_page_config(
 
 @st.cache_resource
 def get_service(chat_model: str) -> RagService:
-    chroma_api_key = get_setting("CHROMA_API_KEY")
-    if chroma_api_key:
-        cloud_options: dict[str, str] = {"api_key": chroma_api_key}
-        for setting_name, option_name in (
-            ("CHROMA_TENANT", "tenant"),
-            ("CHROMA_DATABASE", "database"),
-            ("CHROMA_HOST", "cloud_host"),
-        ):
-            value = get_setting(setting_name)
-            if value:
-                cloud_options[option_name] = value
-        vector_client = chromadb.CloudClient(**cloud_options)
-    else:
-        database_dir = Path(
-            get_setting("CHROMA_DB_DIR", str(PROJECT_DIR / "chroma_db"))
-            or str(PROJECT_DIR / "chroma_db")
-        )
-        database_dir.mkdir(parents=True, exist_ok=True)
-        vector_client = chromadb.PersistentClient(path=str(database_dir))
-    collection = vector_client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
+    qdrant_url = get_setting("QDRANT_URL")
+    qdrant_api_key = get_setting("QDRANT_API_KEY")
+    if not qdrant_url or not qdrant_api_key:
+        raise ValueError("QDRANT_URL and QDRANT_API_KEY must be configured.")
+    collection = QdrantCollection(
+        QdrantClient(url=qdrant_url, api_key=qdrant_api_key),
+        COLLECTION_NAME,
     )
     gemini_client = genai.Client(api_key=get_setting("GEMINI_API_KEY"))
     document_embedder, query_embedder = create_embedding_functions(

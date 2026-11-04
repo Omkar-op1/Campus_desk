@@ -1,6 +1,6 @@
 # College Document Q&A Assistant
 
-A local Retrieval-Augmented Generation (RAG) application for asking natural-language questions about college PDF documents. It extracts and chunks PDF text, creates local embeddings, searches a persistent ChromaDB vector collection, and asks Gemini to answer only from retrieved excerpts. Retrieved document names and page numbers are shown with each answer; weak matches receive a safe refusal.
+A Retrieval-Augmented Generation (RAG) application for asking natural-language questions about college PDF documents. It extracts and chunks PDF text, creates Gemini embeddings, searches a Qdrant Cloud vector collection, and asks Gemini to answer only from retrieved excerpts. Retrieved document names and page numbers are shown with each answer; weak matches receive a safe refusal.
 
 This project is implemented and managed as a **single-person project**. Jira is used only for planning and progress tracking; it is not connected to the application.
 
@@ -9,11 +9,11 @@ This project is implemented and managed as a **single-person project**. Jira is 
 - PDF upload and text extraction with source filename and page retention.
 - Automatic indexing of PDFs in `documents/`, plus optional PDF upload.
 - Overlapping text chunks and Gemini `gemini-embedding-2` semantic embeddings.
-- Chroma Cloud storage; re-indexing a same-named PDF replaces its previous passages.
+- Qdrant Cloud storage; re-indexing a same-named PDF replaces its previous passages.
 - Grounded answers from Gemini (`gemini-3.8-flash` by default).
 - Configurable retrieval distance threshold and top-passage count.
 - Explicit refusal when no document is indexed or retrieved evidence is weak.
-- Local source citations, document removal, and a Docker Compose deployment.
+- Local source citations and document removal.
 - No cloud database or Jira integration.
 
 Scanned/image-only PDFs require OCR before upload. OCR is intentionally not bundled; use a trusted local OCR tool and review its output before indexing.
@@ -25,7 +25,7 @@ Choose one of these run methods:
 - **Python:** Python 3.10+ and a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 - **Docker:** Docker Engine/Desktop with Compose and a Gemini API key.
 
-The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. Embeddings default to Gemini `gemini-embedding-2`; set `GEMINI_EMBEDDING_MODEL` to another supported model if needed. The local `.env` file is loaded automatically and is excluded from version control.
+The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. Embeddings default to Gemini `gemini-embedding-2`; set `GEMINI_EMBEDDING_MODEL` to another supported model if needed. Qdrant Cloud is configured with `QDRANT_URL` and `QDRANT_API_KEY`. The local `.env` file is loaded automatically and is excluded from version control.
 
 ## Run with Python
 
@@ -42,7 +42,7 @@ python -m streamlit run app.py
 
 Open `http://localhost:8501`. On macOS/Linux, run `test -f .env || cp .env.example .env`, add your Google AI Studio key to `GEMINI_API_KEY`, then run `python -m streamlit run app.py`. Keep the key private and do not commit it.
 
-The app automatically indexes PDFs from `documents/` on startup. It skips files already indexed; use **Reindex PDFs in documents folder** to pick up changes to an existing file. Without Chroma Cloud credentials, local development falls back to `chroma_db/`.
+The app automatically indexes PDFs from `documents/` on startup. It skips files already indexed; use **Reindex PDFs in documents folder** to pick up changes to an existing file. Use **Reindex PDFs in documents folder** after changing a source PDF.
 
 ## Deploy on Streamlit Community Cloud
 
@@ -50,19 +50,18 @@ The app automatically indexes PDFs from `documents/` on startup. It skips files 
 2. In [Streamlit Community Cloud](https://share.streamlit.io/), create an app with:
    - **Main file path:** `P3/app.py` when `P3` is a subdirectory, otherwise `app.py`.
    - **Python version:** `3.12` (also recorded in `.python-version`).
-3. Add the following under **Advanced settings → Secrets**. Create a Chroma Cloud database and copy its values from the dashboard's **Connect** panel:
+3. Create a Qdrant Cloud cluster and copy its cluster URL and API key.
+4. Add the following under **Advanced settings → Secrets**:
 
    ```toml
    GEMINI_API_KEY = "your_google_ai_studio_api_key"
    GEMINI_MODEL = "gemini-3.8-flash"
    GEMINI_EMBEDDING_MODEL = "gemini-embedding-2"
-   CHROMA_API_KEY = "your_chroma_cloud_api_key"
-   CHROMA_TENANT = "your_chroma_tenant_id"
-   CHROMA_DATABASE = "your_chroma_database_name"
-   # CHROMA_HOST = "europe-west1.gcp.trychroma.com"
+   QDRANT_URL = "https://your-cluster.qdrant.io"
+   QDRANT_API_KEY = "your_qdrant_cloud_api_key"
    ```
 
-The app reads Streamlit secrets in the cloud and `.env` locally. When `CHROMA_API_KEY` is configured, it uses Chroma Cloud; otherwise it uses the local persistent client. The PDFs committed in `documents/` are indexed automatically after startup. Uploaded PDFs are not durable, so keep permanent source PDFs in `documents/`. Never commit `.env` or `secrets.toml`.
+The app reads Streamlit secrets in the cloud and `.env` locally. Qdrant stores vectors and metadata outside the ephemeral Streamlit process. The PDFs committed in `documents/` are indexed automatically after startup. Uploaded PDFs are not durable, so keep permanent source PDFs in `documents/`. Never commit `.env` or `secrets.toml`.
 
 ## Run with Docker Compose
 
@@ -72,9 +71,9 @@ From the `P3` directory:
 docker compose up --build
 ```
 
-Put your Google AI Studio key in `GEMINI_API_KEY` in `.env` before starting Compose. Compose builds the app, mounts `documents/` read-only, and exposes the UI at `http://localhost:8501`. The vector index persists in the `chroma_data` volume. Set `GEMINI_MODEL` to choose another model. Keep the key private and do not commit it.
+Put `GEMINI_API_KEY`, `QDRANT_URL`, and `QDRANT_API_KEY` in `.env` before starting Compose. Compose builds the app, mounts `documents/` read-only, and exposes the UI at `http://localhost:8501`. Set `GEMINI_MODEL` to choose another model. Keep all keys private and do not commit them.
 
-Stop the service with `Ctrl+C`, then `docker compose down`. Keep the volume to retain the local index. Removing volumes permanently deletes that data.
+Stop the service with `Ctrl+C`, then `docker compose down`. Qdrant Cloud retains the vector index independently of the container.
 
 ## Use the application
 
@@ -84,7 +83,7 @@ Stop the service with `Ctrl+C`, then `docker compose down`. Keep the volume to r
 4. Check the cited source and page against the original PDF.
 5. Adjust the retrieval distance cutoff if your own evaluation shows too many refusals or weak matches.
 
-PDF text extraction stays in the app process. Embeddings and answer generation use Google's Gemini API, and vectors/metadata are stored in Chroma Cloud when configured. Do not index sensitive student records. Review Google's and Chroma's data handling terms before using non-public documents.
+PDF text extraction stays in the app process. Embeddings and answer generation use Google's Gemini API, and vectors/metadata are stored in Qdrant Cloud. Do not index sensitive student records. Review Google's and Qdrant's data handling terms before using non-public documents.
 
 ## Evaluation
 
