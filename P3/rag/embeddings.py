@@ -17,18 +17,19 @@ class GeminiEmbeddingFunction:
         self.task_type = task_type
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
-        if not texts:
-            return []
-        response = self.client.models.embed_content(
-            model=self.model,
-            contents=texts,
-            config={"task_type": self.task_type},
-        )
-        embeddings = getattr(response, "embeddings", None)
-        if not embeddings or len(embeddings) != len(texts):
-            raise RuntimeError("Gemini returned an incomplete embedding batch.")
         values: list[list[float]] = []
-        for embedding in embeddings:
+        for text in texts:
+            response = self.client.models.embed_content(
+                model=self.model,
+                contents=text,
+                config={"task_type": self.task_type},
+            )
+            embeddings = getattr(response, "embeddings", None)
+            if not embeddings or len(embeddings) != 1:
+                raise RuntimeError(
+                    "Gemini returned an incomplete embedding response."
+                )
+            embedding = embeddings[0]
             vector = getattr(embedding, "values", None)
             if not isinstance(vector, list) or not vector:
                 raise RuntimeError("Gemini returned an empty embedding.")
