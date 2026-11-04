@@ -10,7 +10,7 @@ This project is implemented and managed as a **single-person project**. Jira is 
 - Automatic indexing of PDFs in `documents/`, plus optional PDF upload.
 - Overlapping text chunks and local semantic embeddings using ChromaDB's `all-MiniLM-L6-v2` embedding function.
 - Persistent ChromaDB storage; re-indexing a same-named PDF replaces its previous passages.
-- Grounded answers from Gemini (`gemini-2.5-flash` by default).
+- Grounded answers from Gemini (`gemini-3.8-flash` by default).
 - Configurable retrieval distance threshold and top-passage count.
 - Explicit refusal when no document is indexed or retrieved evidence is weak.
 - Local source citations, document removal, and a Docker Compose deployment.
@@ -25,7 +25,7 @@ Choose one of these run methods:
 - **Python:** Python 3.10+ and a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 - **Docker:** Docker Engine/Desktop with Compose and a Gemini API key.
 
-The chat model defaults to `gemini-2.5-flash`; set `GEMINI_MODEL` to another model available to your API key. The embedding model runs locally and does not require an API key. The local `.env` file is loaded automatically and is excluded from version control.
+The chat model defaults to `gemini-3.8-flash`; set `GEMINI_MODEL` to another model available to your API key. The embedding model runs locally and does not require an API key. The local `.env` file is loaded automatically and is excluded from version control.
 
 ## Run with Python
 
@@ -54,7 +54,7 @@ The app automatically indexes PDFs from `documents/` on startup. It skips files 
 
    ```toml
    GEMINI_API_KEY = "your_google_ai_studio_api_key"
-   GEMINI_MODEL = "gemini-2.5-flash"
+   GEMINI_MODEL = "gemini-3.8-flash"
    ```
 
 The app reads Streamlit secrets in the cloud and `.env` locally. The PDFs committed in `documents/` are indexed automatically after startup. Streamlit Cloud storage is ephemeral, so uploaded PDFs and the generated Chroma index are lost when the app is rebuilt or restarted; re-upload documents or keep the source PDFs in `documents/`. Never commit `.env` or `secrets.toml`.

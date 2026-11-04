@@ -18,7 +18,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 load_dotenv(PROJECT_DIR / ".env")
 
 DOCUMENTS_DIR = PROJECT_DIR / "documents"
-DEFAULT_CHAT_MODEL = "gemini-2.5-flash"
+DEFAULT_CHAT_MODEL = "gemini-3.8-flash"
 COLLECTION_NAME = "college_documents"
 
 
