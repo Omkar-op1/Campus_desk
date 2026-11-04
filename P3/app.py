@@ -100,7 +100,7 @@ def show_connection_help(
             st.code(details)
         return
 
-    st.error(f"Gemini model or local embedding request failed: {details}")
+    st.error(f"Model or embedding request failed: {details}")
     st.caption(
         "Check GEMINI_API_KEY, GEMINI_MODEL, VOYAGE_API_KEY, and Qdrant "
         "settings in Streamlit secrets or .env."

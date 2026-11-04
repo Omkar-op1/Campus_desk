@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import time
 
 import httpx
+
+VOYAGE_EMBEDDING_URL = "https://api.voyageai.com/v1/embeddings"
+VOYAGE_MAX_ATTEMPTS = 4
+VOYAGE_DEFAULT_RETRY_SECONDS = 2.0
 
 
 class VoyageEmbeddingFunction:
@@ -17,19 +22,38 @@ class VoyageEmbeddingFunction:
         self.model = model
         self.input_type = input_type
 
+    @staticmethod
+    def _retry_delay(response: httpx.Response, attempt: int) -> float:
+        retry_after = response.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return min(float(retry_after), 30.0)
+            except ValueError:
+                pass
+        return min(VOYAGE_DEFAULT_RETRY_SECONDS * (2 ** (attempt - 1)), 30.0)
+
     def __call__(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        response = httpx.post(
-            "https://api.voyageai.com/v1/embeddings",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={
-                "input": texts,
-                "model": self.model,
-                "input_type": self.input_type,
-            },
-            timeout=60,
-        )
+        for attempt in range(1, VOYAGE_MAX_ATTEMPTS + 1):
+            response = httpx.post(
+                VOYAGE_EMBEDDING_URL,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "input": texts,
+                    "model": self.model,
+                    "input_type": self.input_type,
+                },
+                timeout=60,
+            )
+            if response.status_code != 429:
+                break
+            if attempt == VOYAGE_MAX_ATTEMPTS:
+                raise RuntimeError(
+                    "Voyage rate limit persisted after retries. "
+                    "Try again later or check the Voyage plan limits."
+                )
+            time.sleep(self._retry_delay(response, attempt))
         response.raise_for_status()
         payload = response.json()
         embeddings = payload.get("data")

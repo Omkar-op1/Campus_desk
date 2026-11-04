@@ -9,7 +9,7 @@ from rag.documents import ParsedDocument
 
 NOT_FOUND_ANSWER = "Information not found in the available documents."
 DEFAULT_MAX_COSINE_DISTANCE = 0.65
-EMBEDDING_BATCH_SIZE = 64
+EMBEDDING_BATCH_SIZE = 8
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,6 @@ class RagService:
         embeddings: list[list[float]] = []
         chunk_texts = [chunk.text for chunk in document.chunks]
         for start in range(0, len(chunk_texts), EMBEDDING_BATCH_SIZE):
-            batch = chunk_texts[start : start + EMBEDDING_BATCH_SIZE]
             batch = chunk_texts[start : start + EMBEDDING_BATCH_SIZE]
             batch_embeddings = self.embedder(batch)
             if len(batch_embeddings) != len(batch):
